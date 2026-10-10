@@ -95,6 +95,46 @@
   .backup-btns { display: flex; gap: 8px; }
   .backup-btns button { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 14px; cursor: pointer; }
   .install-tip { color: var(--muted); font-size: 12px; margin: 10px 0 0; line-height: 1.5; }
+
+  .timer.counting .time { color: var(--warn); }
+  .timer.counting .time small { display: none; }
+  .goal-bar { height: 6px; background: var(--bg); border-radius: 3px; margin-top: 14px; overflow: hidden; }
+  .goal-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; }
+  .goal-bar.hit i { background: var(--warn); }
+  .goal-text { margin-top: 6px; }
+  select {
+    background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px; font-size: 16px; font-family: inherit; color-scheme: dark;
+  }
+  .cur-setup { display: flex; gap: 8px; margin-top: 18px; align-items: center; justify-content: center; font-size: 14px; color: var(--muted); }
+  .cur-setup input { width: 72px; text-align: center; }
+  .cur-setup select { flex: 0 1 140px; }
+  .timer.running .cur-setup { opacity: .5; pointer-events: none; }
+
+  details.settings { margin-top: 14px; text-align: left; border-top: 1px solid var(--line); padding-top: 10px; }
+  details.settings summary { color: var(--muted); font-size: 13px; cursor: pointer; text-align: center; list-style: none; }
+  details.settings summary::after { content: ' ▾'; }
+  details.settings[open] summary::after { content: ' ▴'; }
+  .set-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; font-size: 14px; }
+  .set-row .dur-inputs input { width: 56px; padding: 6px; }
+  .switch { width: 20px; height: 20px; accent-color: var(--accent); }
+
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .cal-head .section-title { margin: 0; }
+  .cal-head .icon-btn { width: 32px; height: 32px; font-size: 16px; }
+  .streak { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .streak b { color: var(--accent); font-size: 16px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+  .cal .wd { font-size: 11px; color: var(--muted); padding-bottom: 2px; }
+  .cal .wd:first-child { color: var(--danger); }
+  .cal button {
+    aspect-ratio: 1; border: 0; border-radius: 8px; background: var(--bg); color: var(--muted);
+    font-size: 13px; font-variant-numeric: tabular-nums; cursor: pointer; padding: 0; font-family: inherit;
+  }
+  .cal button.done { background: rgba(61, 220, 151, .22); color: var(--text); font-weight: 600; }
+  .cal button.today { box-shadow: inset 0 0 0 1px var(--muted); }
+  .cal button.sel { box-shadow: inset 0 0 0 2px var(--accent); }
+  .cal button.future { opacity: .35; }
 </style>
 </head>
 <body>
@@ -103,8 +143,35 @@
 
   <section class="card timer" id="timerCard">
     <div class="time" id="timeDisplay">00:00<small>.0</small></div>
+    <div class="goal-bar" id="goalBar" hidden><i id="goalFill"></i></div>
+    <div class="hint goal-text" id="goalText" hidden></div>
+    <div class="cur-setup">
+      <label style="white-space:nowrap">무게 <input type="number" id="curWeight" step="0.5" inputmode="decimal" placeholder="0"> kg</label>
+      <select id="curGrip" aria-label="그립"></select>
+    </div>
     <button class="big-btn" id="toggleBtn">시작</button>
     <div class="hint" id="hint">시작을 누르고 매달리세요</div>
+    <details class="settings">
+      <summary>타이머 설정</summary>
+      <div class="set-row">카운트다운
+        <div class="seg" data-setting="countdown">
+          <button data-v="0">끔</button><button data-v="3">3초</button><button data-v="5">5초</button>
+        </div>
+      </div>
+      <div class="set-row">목표 시간
+        <div class="dur-inputs">
+          <input type="number" id="goalMin" min="0" max="59" inputmode="numeric" placeholder="0"> 분
+          <input type="number" id="goalSec" min="0" max="59" inputmode="numeric" placeholder="0"> 초
+        </div>
+      </div>
+      <div class="set-row">중간 알림
+        <div class="seg" data-setting="interval">
+          <button data-v="0">끔</button><button data-v="15">15초</button><button data-v="30">30초</button><button data-v="60">1분</button>
+        </div>
+      </div>
+      <div class="set-row"><label for="soundOn">소리</label><input type="checkbox" class="switch" id="soundOn"></div>
+      <div class="hint">진동은 Android에서만 동작합니다. 시작 후에는 화면이 꺼지지 않습니다.</div>
+    </details>
   </section>
 
   <section class="card">
@@ -138,6 +205,16 @@
     <div class="chart-note" id="chartNote"></div>
   </section>
 
+  <section class="card">
+    <div class="cal-head">
+      <button class="icon-btn" id="calPrev" aria-label="이전 달">‹</button>
+      <p class="section-title" id="calTitle"></p>
+      <button class="icon-btn" id="calNext" aria-label="다음 달">›</button>
+    </div>
+    <div class="streak" id="streak"></div>
+    <div class="cal" id="cal"></div>
+  </section>
+
   <section class="card history">
     <p class="section-title">최근 기록</p>
     <div id="historyList"></div>
@@ -164,8 +241,14 @@
         <input type="number" id="inSec" min="0" max="59.9" step="0.1" inputmode="decimal"> 초
       </div>
     </label>
+    <div class="field">추가 무게 · 그립
+      <div class="dur-inputs">
+        <input type="number" id="inWeight" step="0.5" inputmode="decimal" placeholder="0"> kg
+        <select id="inGrip" aria-label="그립"></select>
+      </div>
+    </div>
     <label class="field">메모 (선택)
-      <input type="text" id="inMemo" maxlength="60" placeholder="예: 그립 변경, 체중 추가">
+      <input type="text" id="inMemo" maxlength="60" placeholder="예: 컨디션 좋음">
     </label>
     <div class="dlg-actions">
       <button type="button" class="btn-danger" id="delBtn">삭제</button>
@@ -213,36 +296,159 @@ function fmtDateLabel(s) {
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
+function fmtWeight(w) { return w ? `${w > 0 ? '+' : ''}${w}kg` : ''; }
+
+/* ---------- 설정 ---------- */
+const SETTINGS_KEY = 'deadhang.settings.v1';
+const GRIPS = ['오버핸드', '언더핸드', '뉴트럴', '혼합', '한 손'];
+let settings = Object.assign({ countdown: 3, goalSec: 0, interval: 0, sound: true, weight: '', grip: '' },
+  (() => { try { return JSON.parse(localStorage.getItem(SETTINGS_KEY)); } catch { return null; } })());
+function saveSettings() { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+
+function fillGripSelect(sel) {
+  sel.innerHTML = '<option value="">그립 선택 안 함</option>' + GRIPS.map(g => `<option>${g}</option>`).join('');
+}
+fillGripSelect($('curGrip'));
+fillGripSelect($('inGrip'));
+
+function renderSettings() {
+  document.querySelectorAll('[data-setting]').forEach(seg => {
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === settings[seg.dataset.setting]));
+  });
+  $('goalMin').value = settings.goalSec ? Math.floor(settings.goalSec / 60) : '';
+  $('goalSec').value = settings.goalSec ? settings.goalSec % 60 : '';
+  $('soundOn').checked = settings.sound;
+  $('curWeight').value = settings.weight;
+  $('curGrip').value = settings.grip;
+  updateGoalUI(0);
+}
+document.querySelectorAll('[data-setting]').forEach(seg => seg.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  settings[seg.dataset.setting] = Number(b.dataset.v);
+  saveSettings(); renderSettings();
+}));
+['goalMin', 'goalSec'].forEach(id => $(id).addEventListener('change', () => {
+  settings.goalSec = Math.max(0, (Number($('goalMin').value) || 0) * 60 + (Number($('goalSec').value) || 0));
+  saveSettings(); renderSettings();
+}));
+$('soundOn').addEventListener('change', e => { settings.sound = e.target.checked; saveSettings(); });
+$('curWeight').addEventListener('change', e => { settings.weight = e.target.value; saveSettings(); });
+$('curGrip').addEventListener('change', e => { settings.grip = e.target.value; saveSettings(); });
+
+/* ---------- 소리 · 진동 · 화면 유지 ---------- */
+let audioCtx = null;
+function unlockAudio() {
+  try { audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch {}
+}
+function beep(freq = 880, dur = 0.12, times = 1) {
+  if (!settings.sound || !audioCtx) return;
+  for (let i = 0; i < times; i++) {
+    const t = audioCtx.currentTime + i * (dur + 0.08);
+    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t); osc.stop(t + dur);
+  }
+}
+function buzz(pattern) { try { navigator.vibrate?.(pattern); } catch {} }
+
+let wakeLock = null;
+async function keepAwake() {
+  try { if ('wakeLock' in navigator && !wakeLock) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => wakeLock = null); } } catch {}
+}
+function releaseAwake() { wakeLock?.release().catch(() => {}); wakeLock = null; }
+document.addEventListener('visibilitychange', () => { if (runningStart && document.visibilityState === 'visible') keepAwake(); });
+
 /* ---------- 타이머 ---------- */
+let lastSec = null;      // 알림을 1초에 한 번만 울리기 위한 마지막 처리 초
+let goalHit = false;
+
 function renderTime(ms) {
   const f = fmt(ms);
   $('timeDisplay').innerHTML = `${f.main}<small>${f.tenth}</small>`;
 }
+function updateGoalUI(ms) {
+  const g = settings.goalSec * 1000;
+  $('goalBar').hidden = $('goalText').hidden = !g;
+  if (!g) return;
+  $('goalFill').style.width = Math.min(100, ms / g * 100) + '%';
+  $('goalBar').classList.toggle('hit', ms >= g);
+  $('goalText').textContent = ms >= g ? `목표 ${fmtText(g)} 달성! 🎉` : `목표 ${fmtText(g)} · 남은 시간 ${fmtText(g - ms)}`;
+}
 function tick() {
-  renderTime(Date.now() - runningStart);
+  const elapsed = Date.now() - runningStart;
+  const counting = elapsed < 0;
+  $('timerCard').classList.toggle('counting', counting);
+  $('toggleBtn').textContent = counting ? '취소' : '종료';
+  if (counting) {
+    const n = Math.ceil(-elapsed / 1000);
+    $('timeDisplay').textContent = n;
+    $('hint').textContent = '준비하세요…';
+    if (lastSec !== -n) { if (lastSec !== null) { beep(660, 0.1); buzz(80); } lastSec = -n; }
+  } else {
+    renderTime(elapsed);
+    updateGoalUI(elapsed);
+    const sec = Math.floor(elapsed / 1000);
+    if (lastSec !== sec) {
+      if (lastSec !== null) {
+        if (lastSec < 0) { beep(1320, 0.25); buzz(250); $('hint').textContent = '버티는 중… 내려오면 종료를 누르세요'; }
+        else if (settings.goalSec && sec === settings.goalSec && !goalHit) { goalHit = true; beep(1320, 0.15, 3); buzz([200, 100, 200, 100, 400]); }
+        else if (settings.interval && sec > 0 && sec % settings.interval === 0) { beep(990, 0.12); buzz(150); }
+      }
+      lastSec = sec;
+    }
+  }
   rafId = requestAnimationFrame(tick);
 }
 function setRunningUI(on) {
   $('timerCard').classList.toggle('running', on);
+  if (!on) $('timerCard').classList.remove('counting');
   $('toggleBtn').textContent = on ? '종료' : '시작';
   $('hint').textContent = on ? '버티는 중… 내려오면 종료를 누르세요' : '시작을 누르고 매달리세요';
 }
-function start() {
-  runningStart = Date.now();
-  localStorage.setItem(RUN_KEY, runningStart);
+function resumeRunning() {
+  // 새로고침 후 이어갈 때는 이미 지난 알림을 다시 울리지 않는다
+  const elapsed = Date.now() - runningStart;
+  lastSec = elapsed < 0 ? -Math.ceil(-elapsed / 1000) : Math.floor(elapsed / 1000);
+  goalHit = settings.goalSec > 0 && elapsed >= settings.goalSec * 1000;
   setRunningUI(true);
+  keepAwake();
   tick();
 }
-function stop() {
+function start() {
+  unlockAudio();
+  runningStart = Date.now() + settings.countdown * 1000;
+  localStorage.setItem(RUN_KEY, runningStart);
+  lastSec = null;
+  goalHit = false;
+  setRunningUI(true);
+  keepAwake();
+  tick();
+}
+function finish() {
   cancelAnimationFrame(rafId);
-  const ms = Date.now() - runningStart;
-  const day = dateStr(new Date(runningStart));
-  (records[day] ||= []).push({ id: uid(), ms, at: runningStart, memo: '' });
-  save();
   runningStart = null;
   localStorage.removeItem(RUN_KEY);
-  renderTime(ms);
+  releaseAwake();
   setRunningUI(false);
+}
+function stop() {
+  const ms = Date.now() - runningStart;
+  if (ms < 0) {          // 카운트다운 중 취소
+    finish();
+    renderTime(0); updateGoalUI(0);
+    $('hint').textContent = '취소했습니다';
+    return;
+  }
+  const at = runningStart;
+  finish();
+  const day = dateStr(new Date(at));
+  (records[day] ||= []).push({ id: uid(), ms, at, memo: '', weight: Number(settings.weight) || 0, grip: settings.grip });
+  save();
+  renderTime(ms);
   $('hint').textContent = `기록 완료: ${fmtText(ms)}`;
   selectedDate = day;
   render();
@@ -267,18 +473,69 @@ function render() {
   list.forEach((r, i) => {
     const li = document.createElement('li');
     li.className = 'rec';
-    const memo = r.memo ? ` · ${escapeHtml(r.memo)}` : '';
+    const meta = [fmtClock(r.at), fmtWeight(r.weight), r.grip, r.memo].filter(Boolean).map(escapeHtml).join(' · ');
     li.innerHTML = `
       <span class="no">${i + 1}</span>
       <span class="dur">${fmtText(r.ms)}</span>${r.ms === bestMs && list.length > 1 ? '<span class="best">★</span>' : ''}
-      <span class="meta">${fmtClock(r.at)}${memo}</span>
+      <span class="meta">${meta}</span>
       <button class="text-btn">수정</button>`;
     li.querySelector('button').addEventListener('click', () => openEditor(selectedDate, r.id));
     ul.appendChild(li);
   });
   renderHistory();
   renderChart();
+  calYM = selectedDate.slice(0, 7);
+  renderCalendar();
 }
+
+/* ---------- 달력 ---------- */
+let calYM = todayStr().slice(0, 7);
+
+function streakDays() {
+  // 오늘(아직 안 했으면 어제)부터 거꾸로 연속으로 기록이 있는 날 수
+  let d = todayStr(), n = 0;
+  if (!records[d]?.length) d = shiftDate(d, -1);
+  while (records[d]?.length) { n++; d = shiftDate(d, -1); }
+  return n;
+}
+
+function renderCalendar() {
+  const [y, m] = calYM.split('-').map(Number);
+  $('calTitle').textContent = `${y}년 ${m}월`;
+  const first = new Date(y, m - 1, 1).getDay();
+  const last = new Date(y, m, 0).getDate();
+  const today = todayStr();
+  const box = $('cal');
+  box.innerHTML = '일월화수목금토'.split('').map(w => `<div class="wd">${w}</div>`).join('');
+  for (let i = 0; i < first; i++) box.appendChild(document.createElement('div'));
+  let monthDays = 0;
+  for (let d = 1; d <= last; d++) {
+    const ds = `${calYM}-${pad(d)}`;
+    const list = records[ds] || [];
+    const b = document.createElement('button');
+    b.textContent = d;
+    if (list.length) { b.classList.add('done'); monthDays++; }
+    if (ds === today) b.classList.add('today');
+    if (ds === selectedDate) b.classList.add('sel');
+    if (ds > today) b.classList.add('future');
+    b.setAttribute('aria-label', `${m}월 ${d}일${list.length ? `, ${list.length}세트` : ''}`);
+    b.addEventListener('click', () => {
+      selectedDate = ds; render();
+      $('recList').closest('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    box.appendChild(b);
+  }
+  const s = streakDays();
+  $('streak').innerHTML = `연속 <b>${s}</b>일 · ${m}월 <b>${monthDays}</b>일 운동`;
+}
+function shiftMonth(n) {
+  const [y, m] = calYM.split('-').map(Number);
+  const d = new Date(y, m - 1 + n, 1);
+  calYM = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+  renderCalendar();
+}
+$('calPrev').addEventListener('click', () => shiftMonth(-1));
+$('calNext').addEventListener('click', () => shiftMonth(1));
 
 /* ---------- 그래프 ---------- */
 const NS = 'http://www.w3.org/2000/svg';
@@ -416,7 +673,7 @@ $('importFile').addEventListener('change', async e => {
     for (const r of list) {
       const id = r.id || uid();
       if (cur.some(x => x.id === id)) continue;
-      cur.push({ id, ms: r.ms, at: r.at, memo: String(r.memo || '') });
+      cur.push({ id, ms: r.ms, at: r.at, memo: String(r.memo || ''), weight: Number(r.weight) || 0, grip: String(r.grip || '') });
       added++;
     }
     cur.sort((a, b) => a.at - b.at);
@@ -464,6 +721,11 @@ function openEditor(date, id) {
   $('inMin').value = Math.floor(ms / 60000);
   $('inSec').value = rec ? (Math.floor(ms / 100) % 600) / 10 : '';
   $('inMemo').value = rec ? rec.memo : '';
+  // 새 기록은 타이머의 현재 무게·그립을 기본값으로
+  $('inWeight').value = rec ? (rec.weight || '') : settings.weight;
+  const grip = rec ? (rec.grip || '') : settings.grip;
+  if (grip && ![...$('inGrip').options].some(o => o.value === grip)) $('inGrip').add(new Option(grip));
+  $('inGrip').value = grip;
   $('editDlg').showModal();
   if (!rec) $('inSec').focus();
 }
@@ -475,15 +737,16 @@ $('editForm').addEventListener('submit', e => {
   const ms = Math.round(((Number($('inMin').value) || 0) * 60 + (Number($('inSec').value) || 0)) * 1000);
   if (ms <= 0) { e.preventDefault(); alert('시간을 입력하세요'); return; }
   const memo = $('inMemo').value.trim();
+  const weight = Number($('inWeight').value) || 0, grip = $('inGrip').value;
   const { date, id } = editing;
   if (id) {
-    Object.assign(records[date].find(r => r.id === id), { ms, memo });
+    Object.assign(records[date].find(r => r.id === id), { ms, memo, weight, grip });
   } else {
     // 직접 추가: 선택한 날짜의 현재 시각(오늘이 아니면 정오)으로 기록
     const [y, m, d] = date.split('-').map(Number);
     const now = new Date();
     const at = date === todayStr() ? now.getTime() : new Date(y, m - 1, d, 12).getTime();
-    (records[date] ||= []).push({ id: uid(), ms, at, memo });
+    (records[date] ||= []).push({ id: uid(), ms, at, memo, weight, grip });
     records[date].sort((a, b) => a.at - b.at);
   }
   save();
@@ -501,7 +764,8 @@ $('delBtn').addEventListener('click', () => {
 });
 
 /* ---------- 초기화 ---------- */
-if (runningStart) { setRunningUI(true); tick(); }
+renderSettings();
+if (runningStart) resumeRunning();
 render();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
