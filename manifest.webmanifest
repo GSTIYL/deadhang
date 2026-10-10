@@ -1,6 +1,6 @@
 {
-  "name": "데드행 기록",
-  "short_name": "데드행",
+  "name": "운동기록",
+  "short_name": "운동기록",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
