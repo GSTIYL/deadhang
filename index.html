@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111418">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="데드행">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>데드행 기록</title>
+<style>
+  :root {
+    --bg: #111418; --card: #1b2027; --line: #2a313b; --text: #e8ecf1; --muted: #8a94a3;
+    --accent: #3ddc97; --danger: #ff5c6c; --warn: #ffb547;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  main { max-width: 480px; margin: 0 auto; padding: 16px 16px 40px; }
+  h1 { font-size: 18px; margin: 4px 0 16px; color: var(--muted); font-weight: 600; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+
+  .timer { text-align: center; padding: 28px 16px; }
+  .time { font-size: 64px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
+  .time small { font-size: 32px; color: var(--muted); }
+  .timer.running .time { color: var(--accent); }
+  .big-btn {
+    margin-top: 20px; width: 100%; padding: 20px; border: 0; border-radius: 14px;
+    font-size: 22px; font-weight: 700; cursor: pointer; color: #0b0e11; background: var(--accent);
+  }
+  .timer.running .big-btn { background: var(--danger); color: #fff; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 10px; }
+
+  .date-nav { display: flex; align-items: center; gap: 8px; }
+  .date-nav input { flex: 1; text-align: center; }
+  .icon-btn { background: var(--line); color: var(--text); border: 0; border-radius: 10px; width: 40px; height: 40px; font-size: 18px; cursor: pointer; }
+  input {
+    background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px; font-size: 16px; font-family: inherit; color-scheme: dark;
+  }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
+  .stat { background: var(--bg); border-radius: 10px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: var(--muted); }
+
+  ul { list-style: none; margin: 0; padding: 0; }
+  .rec { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .rec .no { color: var(--muted); width: 28px; font-size: 13px; }
+  .rec .dur { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .rec .meta { flex: 1; font-size: 12px; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rec .best { color: var(--warn); font-size: 12px; margin-left: 4px; }
+  .text-btn { background: none; border: 0; color: var(--muted); font-size: 14px; cursor: pointer; padding: 6px; }
+  .text-btn:hover { color: var(--text); }
+  .empty { color: var(--muted); text-align: center; padding: 20px 0 8px; font-size: 14px; }
+  .add-btn { width: 100%; margin-top: 12px; padding: 12px; background: none; border: 1px dashed var(--line); color: var(--muted); border-radius: 10px; font-size: 15px; cursor: pointer; }
+
+  .history .row { display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; font-size: 14px; }
+  .history .row span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .section-title { font-size: 14px; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+
+  dialog { background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 16px; padding: 20px; width: min(360px, calc(100% - 32px)); }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h2 { margin: 0 0 16px; font-size: 18px; }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+  .dur-inputs { display: flex; align-items: center; gap: 6px; color: var(--text); }
+  .dur-inputs input { width: 80px; text-align: center; }
+  .dlg-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .dlg-actions button { flex: 1; padding: 12px; border-radius: 10px; border: 0; font-size: 15px; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: #0b0e11; font-weight: 700; }
+  .btn-ghost { background: var(--line); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger) !important; }
+
+  .chart-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .chart-head .section-title { margin: 0; }
+  .seg { display: flex; background: var(--bg); border-radius: 8px; padding: 2px; }
+  .seg button { background: none; border: 0; color: var(--muted); font-size: 12px; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+  .seg button.on { background: var(--line); color: var(--text); }
+  .chart-wrap { position: relative; }
+  #chart { display: block; width: 100%; height: 180px; touch-action: pan-y; }
+  #chart .grid { stroke: var(--line); stroke-width: 1; }
+  #chart .axis { fill: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+  #chart .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  #chart .dot { fill: var(--accent); stroke: var(--card); stroke-width: 2; }
+  #chart .cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+  .tip { position: absolute; top: 0; pointer-events: none; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; font-size: 12px; white-space: nowrap; transform: translateX(-50%); display: none; }
+  .tip b { font-size: 14px; font-variant-numeric: tabular-nums; }
+  .chart-note { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+  .backup-btns { display: flex; gap: 8px; }
+  .backup-btns button { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 14px; cursor: pointer; }
+  .install-tip { color: var(--muted); font-size: 12px; margin: 10px 0 0; line-height: 1.5; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🏋️ 데드행 기록</h1>
+
+  <section class="card timer" id="timerCard">
+    <div class="time" id="timeDisplay">00:00<small>.0</small></div>
+    <button class="big-btn" id="toggleBtn">시작</button>
+    <div class="hint" id="hint">시작을 누르고 매달리세요</div>
+  </section>
+
+  <section class="card">
+    <div class="date-nav">
+      <button class="icon-btn" id="prevDay" aria-label="이전 날">‹</button>
+      <input type="date" id="dateInput">
+      <button class="icon-btn" id="nextDay" aria-label="다음 날">›</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="statCount">0</b><span>세트</span></div>
+      <div class="stat"><b id="statBest">-</b><span>최고</span></div>
+      <div class="stat"><b id="statTotal">-</b><span>합계</span></div>
+    </div>
+    <ul id="recList"></ul>
+    <button class="add-btn" id="addBtn">＋ 기록 직접 추가</button>
+  </section>
+
+  <section class="card">
+    <div class="chart-head">
+      <p class="section-title">날짜별 최고 기록</p>
+      <div class="seg" id="rangeSeg">
+        <button data-days="30" class="on">30일</button>
+        <button data-days="90">90일</button>
+        <button data-days="0">전체</button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <svg id="chart" role="img" aria-label="날짜별 최고 기록 그래프"></svg>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="chart-note" id="chartNote"></div>
+  </section>
+
+  <section class="card history">
+    <p class="section-title">최근 기록</p>
+    <div id="historyList"></div>
+  </section>
+
+  <section class="card">
+    <p class="section-title">백업</p>
+    <div class="backup-btns">
+      <button id="exportBtn">파일로 내보내기</button>
+      <button id="importBtn">파일에서 가져오기</button>
+    </div>
+    <input type="file" id="importFile" accept=".json,application/json" hidden>
+    <p class="install-tip">기록은 이 기기의 브라우저에만 저장됩니다. 가끔 내보내기로 백업해 두세요.<br>
+      휴대폰 홈 화면에 설치: iPhone은 Safari 공유 → "홈 화면에 추가", Android는 Chrome 메뉴 → "앱 설치".</p>
+  </section>
+</main>
+
+<dialog id="editDlg">
+  <form method="dialog" id="editForm">
+    <h2 id="dlgTitle">기록 수정</h2>
+    <label class="field">시간
+      <div class="dur-inputs">
+        <input type="number" id="inMin" min="0" max="59" inputmode="numeric"> 분
+        <input type="number" id="inSec" min="0" max="59.9" step="0.1" inputmode="decimal"> 초
+      </div>
+    </label>
+    <label class="field">메모 (선택)
+      <input type="text" id="inMemo" maxlength="60" placeholder="예: 그립 변경, 체중 추가">
+    </label>
+    <div class="dlg-actions">
+      <button type="button" class="btn-danger" id="delBtn">삭제</button>
+      <button type="button" class="btn-ghost" id="cancelBtn">취소</button>
+      <button type="submit" class="btn-primary">저장</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const STORE_KEY = 'deadhang.records.v1';
+const RUN_KEY = 'deadhang.running.v1';
+
+const $ = id => document.getElementById(id);
+let records = load();            // { 'YYYY-MM-DD': [{ id, ms, at, memo }] }
+let selectedDate = todayStr();
+let runningStart = Number(localStorage.getItem(RUN_KEY)) || null;
+let rafId = null;
+let editing = null;              // { date, id } 또는 { date, id: null } (추가)
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch { return {}; }
+}
+function save() { localStorage.setItem(STORE_KEY, JSON.stringify(records)); }
+
+function pad(n) { return String(n).padStart(2, '0'); }
+function dateStr(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function todayStr() { return dateStr(new Date()); }
+function shiftDate(s, days) {
+  const [y, m, d] = s.split('-').map(Number);
+  return dateStr(new Date(y, m - 1, d + days));
+}
+function fmt(ms) {
+  const tenths = Math.floor(ms / 100);
+  const m = Math.floor(tenths / 600), s = Math.floor(tenths / 10) % 60, t = tenths % 10;
+  return { main: `${pad(m)}:${pad(s)}`, tenth: `.${t}` };
+}
+function fmtText(ms) { const f = fmt(ms); return f.main + f.tenth; }
+function fmtClock(ts) { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fmtDateLabel(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  const wd = '일월화수목금토'[new Date(y, m - 1, d).getDay()];
+  const rel = s === todayStr() ? ' (오늘)' : s === shiftDate(todayStr(), -1) ? ' (어제)' : '';
+  return `${m}월 ${d}일 ${wd}${rel}`;
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+/* ---------- 타이머 ---------- */
+function renderTime(ms) {
+  const f = fmt(ms);
+  $('timeDisplay').innerHTML = `${f.main}<small>${f.tenth}</small>`;
+}
+function tick() {
+  renderTime(Date.now() - runningStart);
+  rafId = requestAnimationFrame(tick);
+}
+function setRunningUI(on) {
+  $('timerCard').classList.toggle('running', on);
+  $('toggleBtn').textContent = on ? '종료' : '시작';
+  $('hint').textContent = on ? '버티는 중… 내려오면 종료를 누르세요' : '시작을 누르고 매달리세요';
+}
+function start() {
+  runningStart = Date.now();
+  localStorage.setItem(RUN_KEY, runningStart);
+  setRunningUI(true);
+  tick();
+}
+function stop() {
+  cancelAnimationFrame(rafId);
+  const ms = Date.now() - runningStart;
+  const day = dateStr(new Date(runningStart));
+  (records[day] ||= []).push({ id: uid(), ms, at: runningStart, memo: '' });
+  save();
+  runningStart = null;
+  localStorage.removeItem(RUN_KEY);
+  renderTime(ms);
+  setRunningUI(false);
+  $('hint').textContent = `기록 완료: ${fmtText(ms)}`;
+  selectedDate = day;
+  render();
+}
+$('toggleBtn').addEventListener('click', () => runningStart ? stop() : start());
+
+/* ---------- 기록 화면 ---------- */
+function render() {
+  $('dateInput').value = selectedDate;
+  const list = records[selectedDate] || [];
+  const bestMs = list.length ? Math.max(...list.map(r => r.ms)) : 0;
+  const total = list.reduce((a, r) => a + r.ms, 0);
+  $('statCount').textContent = list.length;
+  $('statBest').textContent = list.length ? fmtText(bestMs) : '-';
+  $('statTotal').textContent = list.length ? fmtText(total) : '-';
+
+  const ul = $('recList');
+  ul.innerHTML = '';
+  if (!list.length) {
+    ul.innerHTML = `<li class="empty">${fmtDateLabel(selectedDate)} 기록이 없습니다</li>`;
+  }
+  list.forEach((r, i) => {
+    const li = document.createElement('li');
+    li.className = 'rec';
+    const memo = r.memo ? ` · ${escapeHtml(r.memo)}` : '';
+    li.innerHTML = `
+      <span class="no">${i + 1}</span>
+      <span class="dur">${fmtText(r.ms)}</span>${r.ms === bestMs && list.length > 1 ? '<span class="best">★</span>' : ''}
+      <span class="meta">${fmtClock(r.at)}${memo}</span>
+      <button class="text-btn">수정</button>`;
+    li.querySelector('button').addEventListener('click', () => openEditor(selectedDate, r.id));
+    ul.appendChild(li);
+  });
+  renderHistory();
+  renderChart();
+}
+
+/* ---------- 그래프 ---------- */
+const NS = 'http://www.w3.org/2000/svg';
+let chartDays = 30;
+let chartPts = [];
+
+function dayNum(s) { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d) / 86400000; }
+function fmtAxis(sec) { return sec < 60 ? `${sec}초` : sec % 60 ? `${Math.floor(sec / 60)}:${pad(sec % 60)}` : `${sec / 60}분`; }
+function svgEl(tag, attrs, parent) {
+  const el = document.createElementNS(NS, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  parent.appendChild(el);
+  return el;
+}
+
+function renderChart() {
+  const svg = $('chart');
+  svg.innerHTML = '';
+  $('tip').style.display = 'none';
+  const W = svg.clientWidth || 300, H = 180;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const M = { l: 40, r: 12, t: 12, b: 22 };
+
+  const today = dayNum(todayStr());
+  let days = Object.keys(records).filter(d => records[d].length).sort();
+  if (chartDays) days = days.filter(d => dayNum(d) > today - chartDays && dayNum(d) <= today);
+  chartPts = days.map(d => ({ d, x: dayNum(d), ms: Math.max(...records[d].map(r => r.ms)), n: records[d].length }));
+
+  if (!chartPts.length) {
+    svgEl('text', { x: W / 2, y: H / 2, 'text-anchor': 'middle', class: 'axis' }, svg).textContent = '이 기간에 기록이 없습니다';
+    $('chartNote').textContent = '';
+    return;
+  }
+
+  // x 범위: 기간 선택 시 그 기간 전체, '전체'면 첫 기록~마지막 기록
+  let x0 = chartDays ? today - chartDays + 1 : chartPts[0].x;
+  let x1 = chartDays ? today : chartPts[chartPts.length - 1].x;
+  if (x1 === x0) { x0 -= 1; x1 += 1; }
+  const sx = x => M.l + (x - x0) / (x1 - x0) * (W - M.l - M.r);
+
+  // y 눈금: 4칸 이하가 되는 깔끔한 초 단위
+  const maxSec = Math.max(...chartPts.map(p => p.ms)) / 1000;
+  const step = [5, 10, 15, 30, 60, 120, 300, 600, 1200].find(s => maxSec * 1.1 / s <= 4) || 1800;
+  const yMax = Math.max(step, Math.ceil(maxSec * 1.1 / step) * step);
+  const sy = sec => H - M.b - sec / yMax * (H - M.t - M.b);
+
+  for (let v = 0; v <= yMax; v += step) {
+    svgEl('line', { x1: M.l, x2: W - M.r, y1: sy(v), y2: sy(v), class: 'grid' }, svg);
+    svgEl('text', { x: M.l - 6, y: sy(v) + 3, 'text-anchor': 'end', class: 'axis' }, svg).textContent = fmtAxis(v);
+  }
+  const lbl = x => { const d = new Date(x * 86400000); return `${d.getUTCMonth() + 1}/${d.getUTCDate()}`; };
+  svgEl('text', { x: M.l, y: H - 6, 'text-anchor': 'start', class: 'axis' }, svg).textContent = lbl(x0);
+  svgEl('text', { x: W - M.r, y: H - 6, 'text-anchor': 'end', class: 'axis' }, svg).textContent = lbl(x1);
+
+  chartPts.forEach(p => { p.px = sx(p.x); p.py = sy(p.ms / 1000); });
+  if (chartPts.length > 1) {
+    svgEl('path', { class: 'line', d: chartPts.map((p, i) => `${i ? 'L' : 'M'}${p.px},${p.py}`).join('') }, svg);
+  }
+  chartPts.forEach(p => svgEl('circle', { class: 'dot', cx: p.px, cy: p.py, r: 4 }, svg));
+  svgEl('line', { class: 'cross', id: 'cross', y1: M.t, y2: H - M.b, x1: -10, x2: -10 }, svg);
+  svgEl('circle', { class: 'dot', id: 'hoverDot', r: 6, cx: -20, cy: -20 }, svg);
+
+  const best = chartPts.reduce((a, p) => p.ms > a.ms ? p : a);
+  $('chartNote').textContent = `기간 최고 ${fmtText(best.ms)} (${fmtDateLabel(best.d)}) · ${chartPts.length}일 운동`;
+}
+
+function nearestPt(evt) {
+  if (!chartPts.length) return null;
+  const rect = $('chart').getBoundingClientRect();
+  const x = evt.clientX - rect.left;
+  return chartPts.reduce((a, p) => Math.abs(p.px - x) < Math.abs(a.px - x) ? p : a);
+}
+$('chart').addEventListener('pointermove', e => {
+  const p = nearestPt(e);
+  if (!p) return;
+  $('cross').setAttribute('x1', p.px); $('cross').setAttribute('x2', p.px);
+  $('hoverDot').setAttribute('cx', p.px); $('hoverDot').setAttribute('cy', p.py);
+  const tip = $('tip');
+  tip.innerHTML = `${fmtDateLabel(p.d)}<br><b>${fmtText(p.ms)}</b> · ${p.n}세트`;
+  tip.style.display = 'block';
+  const half = tip.offsetWidth / 2, W = $('chart').clientWidth;
+  tip.style.left = Math.min(Math.max(p.px, half), W - half) + 'px';
+});
+$('chart').addEventListener('pointerleave', () => {
+  $('tip').style.display = 'none';
+  $('cross').setAttribute('x1', -10); $('cross').setAttribute('x2', -10);
+  $('hoverDot').setAttribute('cx', -20);
+});
+$('chart').addEventListener('click', e => {
+  const p = nearestPt(e);
+  if (p) { selectedDate = p.d; render(); }
+});
+$('rangeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  chartDays = Number(b.dataset.days);
+  $('rangeSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  renderChart();
+});
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderChart, 150); });
+
+/* ---------- 백업 ---------- */
+$('exportBtn').addEventListener('click', () => {
+  const data = { app: 'deadhang', version: 1, exportedAt: new Date().toISOString(), records };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `deadhang-backup-${todayStr()}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+$('importBtn').addEventListener('click', () => $('importFile').click());
+$('importFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  let incoming;
+  try {
+    const data = JSON.parse(await file.text());
+    incoming = data.records || data;
+    const ok = typeof incoming === 'object' && Object.entries(incoming).every(([d, list]) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(d) && Array.isArray(list) &&
+      list.every(r => r && typeof r.ms === 'number' && r.ms > 0 && typeof r.at === 'number'));
+    if (!ok) throw new Error();
+  } catch {
+    alert('백업 파일 형식이 올바르지 않습니다.');
+    return;
+  }
+  // 기존 기록은 지우지 않고 합친다 (같은 기록은 id로 중복 제거)
+  let added = 0;
+  for (const [d, list] of Object.entries(incoming)) {
+    const cur = records[d] ||= [];
+    for (const r of list) {
+      const id = r.id || uid();
+      if (cur.some(x => x.id === id)) continue;
+      cur.push({ id, ms: r.ms, at: r.at, memo: String(r.memo || '') });
+      added++;
+    }
+    cur.sort((a, b) => a.at - b.at);
+    if (!cur.length) delete records[d];
+  }
+  if (!confirm(`새 기록 ${added}개를 추가합니다. 기존 기록은 그대로 유지됩니다. 진행할까요?`)) {
+    records = load();
+    return;
+  }
+  save();
+  render();
+});
+
+function renderHistory() {
+  const days = Object.keys(records).filter(d => records[d].length).sort().reverse().slice(0, 14);
+  const box = $('historyList');
+  if (!days.length) { box.innerHTML = '<div class="empty">아직 기록이 없습니다</div>'; return; }
+  box.innerHTML = '';
+  days.forEach(d => {
+    const list = records[d];
+    const best = Math.max(...list.map(r => r.ms));
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `<span>${fmtDateLabel(d)}</span><span>${list.length}세트 · 최고 ${fmtText(best)}</span>`;
+    row.addEventListener('click', () => { selectedDate = d; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    box.appendChild(row);
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+$('prevDay').addEventListener('click', () => { selectedDate = shiftDate(selectedDate, -1); render(); });
+$('nextDay').addEventListener('click', () => { selectedDate = shiftDate(selectedDate, 1); render(); });
+$('dateInput').addEventListener('change', e => { if (e.target.value) { selectedDate = e.target.value; render(); } });
+
+/* ---------- 수정 / 추가 다이얼로그 ---------- */
+function openEditor(date, id) {
+  const rec = id ? records[date].find(r => r.id === id) : null;
+  editing = { date, id };
+  $('dlgTitle').textContent = rec ? '기록 수정' : `기록 추가 · ${fmtDateLabel(date)}`;
+  $('delBtn').style.display = rec ? '' : 'none';
+  const ms = rec ? rec.ms : 0;
+  $('inMin').value = Math.floor(ms / 60000);
+  $('inSec').value = rec ? (Math.floor(ms / 100) % 600) / 10 : '';
+  $('inMemo').value = rec ? rec.memo : '';
+  $('editDlg').showModal();
+  if (!rec) $('inSec').focus();
+}
+
+$('addBtn').addEventListener('click', () => openEditor(selectedDate, null));
+$('cancelBtn').addEventListener('click', () => $('editDlg').close());
+
+$('editForm').addEventListener('submit', e => {
+  const ms = Math.round(((Number($('inMin').value) || 0) * 60 + (Number($('inSec').value) || 0)) * 1000);
+  if (ms <= 0) { e.preventDefault(); alert('시간을 입력하세요'); return; }
+  const memo = $('inMemo').value.trim();
+  const { date, id } = editing;
+  if (id) {
+    Object.assign(records[date].find(r => r.id === id), { ms, memo });
+  } else {
+    // 직접 추가: 선택한 날짜의 현재 시각(오늘이 아니면 정오)으로 기록
+    const [y, m, d] = date.split('-').map(Number);
+    const now = new Date();
+    const at = date === todayStr() ? now.getTime() : new Date(y, m - 1, d, 12).getTime();
+    (records[date] ||= []).push({ id: uid(), ms, at, memo });
+    records[date].sort((a, b) => a.at - b.at);
+  }
+  save();
+  render();
+});
+
+$('delBtn').addEventListener('click', () => {
+  if (!confirm('이 기록을 삭제할까요?')) return;
+  const { date, id } = editing;
+  records[date] = records[date].filter(r => r.id !== id);
+  if (!records[date].length) delete records[date];
+  save();
+  $('editDlg').close();
+  render();
+});
+
+/* ---------- 초기화 ---------- */
+if (runningStart) { setRunningUI(true); tick(); }
+render();
+
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
