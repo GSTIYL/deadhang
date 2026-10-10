@@ -10,7 +10,9 @@
   - `deadhang.running.v1`: 진행 중인 타이머 시작 시각 (새로고침해도 유지)
 - 백업 파일 형식: `{ app: "deadhang", version: 1, exportedAt, records }`. 가져오기는 항상 병합(id로 중복 제거), 기존 기록 삭제 안 함
 - 로컬 실행: `python -m http.server 5173` (`.claude/launch.json`의 `deadhang`)
-- 휴대폰 설치/서비스워커는 HTTPS 필요 → 외부 호스팅 필요 (배포는 사용자 확인 후 진행)
+- 배포: GitHub Pages (`main` 브랜치 루트) — 저장소 https://github.com/GSTIYL/deadhang (public), 주소 https://gstiyl.github.io/deadhang/
+  - `main`에 push하면 자동 재배포. push는 사용자 요청 시에만
+  - gh CLI 경로: `C:\Program Files\GitHub CLI\gh.exe` (PowerShell에서는 `& "경로"`로 실행)
 
 ## 작업 기록
 - 마지막 갱신: 2026-10-10
@@ -25,4 +27,5 @@
   - 서비스워커 등록 및 캐시 생성 확인
   - 가져오기: 중복 제거 병합(84→85), 잘못된 파일 거부 확인
   - 내보내기: 실제 다운로드 미확인 (코드만 작성)
-- 다음 작업: HTTPS 호스팅(GitHub Pages/Netlify 등) 결정 후 배포 → 휴대폰 설치 테스트
+  - 배포: GitHub Pages 빌드 완료, 페이지·manifest·아이콘 HTTP 200 확인 (브라우저 패널 접속은 차단돼 실기기 미확인)
+- 다음 작업: 휴대폰에서 주소 접속 → 홈 화면 설치 → 오프라인 동작 확인
